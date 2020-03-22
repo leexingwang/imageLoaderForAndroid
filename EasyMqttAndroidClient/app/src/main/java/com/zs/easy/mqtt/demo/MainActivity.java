@@ -7,11 +7,14 @@ import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.view.View;
 
-import com.zs.easy.mqtt.EasyMqttService;
-import com.zs.easy.mqtt.IEasyMqttCallBack;
 
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
+
+import java.util.Random;
+
+import static java.lang.Thread.sleep;
 
 /**
  * @author zhangshun
@@ -27,6 +30,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             ActivityCompat.requestPermissions(this,
@@ -40,27 +44,45 @@ public class MainActivity extends Activity {
         findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (isConnected()) {
-                    //消息内容
-                    String msg = "{\"ts\":"+Long.toString(System.currentTimeMillis()/1000L)+", \"values\":{\"temperature\":25}}";
-                    //消息主题
-                    String topic = "v1/devices/me/telemetry";
-                    //消息策略
-                    int qos = 2;
-                    //是否保留
-                    boolean retained = true;
-                    //发布消息
-                    publish(msg, topic, qos, retained);
-                }
+//                final Random random = new Random(1);
+//
+//                new Thread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        while (true) {
+//                            try {
+//                                if (isConnected()) {
+//                                    //消息内容
+//                                    String msg = "{\"ts\":" + Long.toString(System.currentTimeMillis() / 1000L) + ", \"values\":{\"temperature\":" + random.nextInt(100) + ",\"ontimeValues\": " + random.nextInt(100) + "}}";
+//                                    //消息主题
+//                                    String topic = "v1/devices/me/telemetry";
+//                                    //消息策略
+//                                    int qos = 2;
+//                                    //是否保留
+//                                    boolean retained = true;
+//                                    //发布消息
+//                                    publish(msg, topic, qos, retained);
+//                                }
+//                                sleep(100);
+//                            } catch (Exception e) {
+//                                e.printStackTrace();
+//                            }
+//                        }
+//                    }
+//                }).start();
+
             }
         });
 
 
+    }
 
-//        disconnect();
 
-//        close();
-
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        disconnect();
+        close();
     }
 
     /**
@@ -101,13 +123,17 @@ public class MainActivity extends Activity {
         // 1 保证能收到消息，但不一定只收到一条
         // 2 保证收到切只能收到一条消息
         int[] qoss = new int[]{2};
-        mqttService.subscribe(topics, qoss);
+//        mqttService.subscribe(topics, qoss);
+        mqttService.subscribe("v1/devices/me/rpc/response/+", 2);
+
+        mqttService.publish("{\"method\":\"getTime\",\"params\":{}}", "v1/devices/me/rpc/request/1", 2, true);
     }
 
     /**
      * 连接Mqtt服务器
      */
     private void connect() {
+        mqttService.close();
         mqttService.connect(new IEasyMqttCallBack() {
             @Override
             public void messageArrived(String topic, String message, int qos) {
@@ -146,12 +172,13 @@ public class MainActivity extends Activity {
                 .autoReconnect(true)
                 //设置不清除回话session 可收到服务器之前发出的推送消息
                 .cleanSession(false)
+                .retained(true)
                 //唯一标示 保证每个设备都唯一就可以 建议 imei
                 .clientId("yourclientId")
                 //mqtt服务器地址 格式例如：tcp://10.0.261.159:1883
                 .serverUrl("tcp://101.133.167.199:1883")
                 //密码为设备token
-                .userName("3cM4ylvJcRJtBQ8yzgmg")
+                .userName("y7odxFayS8lZTPjBmNK6")
                 .passWord("")
                 //心跳包默认的发送间隔
                 .keepAliveInterval(20)
